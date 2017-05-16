@@ -1,0 +1,83 @@
+#!/bin/bash
+
+##############################################################
+# name    : RestoreFromTape
+# author  : Wim de Leeuw
+# date    : 12-05-2017
+# version : 0.1
+# descript: Script to restore directory from tape 
+##############################################################
+
+PROG=`basename $0`
+export TAPE="/dev/nst0"
+
+function error_exit {
+    echo "$PROG failed: $1"
+    exit 64
+}
+
+ARCH_DIR="/archive/restore"
+LOG_FILE="/archive/meta/archive_table"
+
+if [ ! -f $LOG_FILE ] ; then
+   error_exit "could not locate file with archive information"
+fi
+
+if [ $# -lt 2 ] ; then
+  error_exit "at least 2 arguments needed : Barcode TapeLocationNumber"  
+fi
+
+TAPE_BARCODE=$1
+LOCATION=$2
+
+ARCHIVE_NAME=`grep "$TAPE_BARCODE	$LOCATION	" $LOG_FILE | awk -F"\t" '{print $3}' | head -1`
+ARCHIVE_MD5=`grep "$TAPE_BARCODE	$LOCATION	" $LOG_FILE | awk -F"\t" '{print $6}' | head -1`
+
+if [ "$ARCHIVE_NAME" == "" ] ; then 
+   error_exit "Unknown Archive."
+fi
+
+echo "Restoring $ARCHIVE_NAME" 
+
+if [ -d ${ARCH_DIR}/$ARCHIVE_NAME ] ; then
+   error_exit "${ARCH_DIR}/$ARCHIVE_NAME exists."
+fi
+
+cd ${ARCH_DIR}
+
+TAPE_STATUS=`mt status`
+
+# Check if there is a tape in the drive
+if echo $TAPE_STATUS | grep "DR_OPEN" > /dev/null; then
+    error_exit "no tape in reader";
+fi
+
+mt asf 0 
+
+ID_ON_TAPE=`cat $TAPE 2> /dev/null | jq -r ".TapeBarcode"` 
+
+if [ "$ID_ON_TAPE" != "$TAPE_BARCODE" ] ; then 
+   error_exit "tape has wrong barcode or is unlabeled"
+fi 
+
+if [ "$LOCATION" -lt 1 ] ; then 
+   error_exit "invalid tape location : $LOCATION"
+fi 
+
+mt asf $((LOCATION+1))
+if [ $? -eq 1 ] ; then 
+    error_exit "slot $LOCATION not found"
+fi 
+
+mt asf ${LOCATION}
+
+tar -xM 
+#MD5CHECK=`tar -cf - $ARCHIVE_NAME | md5sum | awk '{print $1}'`
+MD5CHECK=`find  $ARCHIVE_NAME  -type f -exec cat {} \; | md5sum | awk '{print $1}'`
+if [ "${MD5CHECK}" !=  "${ARCHIVE_MD5}" ] ; then 
+    error_exit "md5sum does not match ${MD5CHECK} != ${ARCHIVE_MD5}"
+fi 
+
+echo "$ARCHIVE_NAME sucessfully restored"
+
+exit 0

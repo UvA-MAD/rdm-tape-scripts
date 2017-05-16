@@ -1,0 +1,118 @@
+#!/bin/bash
+
+##############################################################
+# name    : ArchiveToTape
+# author  : Wim de Leeuw
+# date    : 12-05-2017
+# version : 0.1
+# descript: Script to archive directory to tape 
+##############################################################
+
+PROG=`basename $0`
+ARCHIVE_NAME=$1
+TAPE_BARCODE=$2
+LOCATION=$3
+
+export TAPE="/dev/nst0"
+ARCH_DIR="/archive/upload"
+META_DIR="/archive/meta"
+LOG_FILE="${META_DIR}/archive_table"
+CONTENT_DIR="${META_DIR}/archive_content"
+
+TAR="/bin/tar"
+MT="/bin/mt"
+
+function error_exit {
+    echo "$PROG failed: $1"
+    exit 64
+}
+
+if [ ! -f ${MT} ] ; then
+  error_exit "tape operation program $MT not found"  
+fi 
+
+if [ ! -d ${META_DIR} ] ; then 
+  error_exit "$META_DIR not found"  
+fi
+
+cd ${ARCH_DIR}
+
+ARCHIVE_PATH="${ARCH_DIR}/${ARCHIVE_NAME}"
+
+if [ $# -lt 3 ] ; then
+  error_exit "at least 3 arguments needed : Directory TapeID TapeLocationNumber"  
+fi
+
+if [ ! -d "$ARCHIVE_PATH" ] ; then 
+  error_exit "archive directory $ARCHIVE_PATH not found"
+fi 
+
+if [ ! -r "$ARCHIVE_PATH" ] ; then 
+  error_exit "archive directory $ARCHIVE_PATH not readable"
+fi 
+
+TAPE_STATUS=`${MT} status`
+
+# Check if there is a tape in the drive
+if echo $TAPE_STATUS | grep "DR_OPEN" > /dev/null; then
+    error_exit "No tape in reader";
+fi
+
+# Check if tape write protected
+if echo $TAPE_STATUS | grep "WR_PROT" > /dev/null; then
+    error_exit "tape in reader has write protect tab switched on";
+fi
+
+${MT} asf 0 
+ID_ON_TAPE=`cat $TAPE | jq -r ".TapeBarcode"`
+
+if [ "$ID_ON_TAPE" != "$TAPE_BARCODE" ] ; then 
+   error_exit "tape barcode mismatch tape has no or non matching label"
+fi 
+
+if [ "$LOCATION" -lt 1 ] ; then 
+   error_exit "invalid tape location : $LOCATION"
+fi 
+
+if  ${MT} asf $LOCATION  ; then 
+   if [ "$4" != "FORCE" ] ; then 
+       if ${MT} asf $((LOCATION+1))  2> /dev/null ; then 
+          error_exit "not last record" 
+       fi 
+    else 
+       echo "$PROG warning: tape overwritten"
+    fi 
+else 
+   error_exit "requested tape location beyond current end"  
+fi
+
+
+MD5FILE=`mktemp /tmp/archMD5_XXXXXX`
+
+#$TAR -cf - $ARCHIVE_NAME | md5sum >  $MD5FILE
+find  $ARCHIVE_NAME  -type f -exec cat {} \; | md5sum > $MD5FILE
+
+# tar the archive to tape 
+
+${MT} asf ${LOCATION}
+$TAR -cM ${ARCHIVE_NAME} 
+${MT} asf ${LOCATION}
+
+# Check md5sum and fail if md5sum does not match which previously calculated value
+
+tar -xO | md5sum  --quiet -c $MD5FILE 
+if [ $? -eq 1 ] ; then 
+    rm $MD5FILE
+    error_exit "md5sum mismatch"
+fi 
+
+MD5SUM=`awk '{print $1}' $MD5FILE`
+rm $MD5FILE
+
+ls -alR ${ARCHIVE_NAME} > ${CONTENT_DIR}/${ARCHIVE_NAME}.toc
+
+ARCHIVE_DATE=`date +%d-%m-%Y`
+
+echo "$TAPE_BARCODE	$LOCATION	$ARCHIVE_NAME	-	$ARCHIVE_DATE	$MD5SUM" >> $LOG_FILE
+
+exit 

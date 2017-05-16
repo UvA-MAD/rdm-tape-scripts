@@ -1,0 +1,101 @@
+#!/bin/bash
+
+##############################################################
+# name    : LabelTape
+# author  : Wim de Leeuw
+# date    : 12-05-2017
+# version : 0.1
+# descript: Label a tape to use in SILS-RDM system
+##############################################################
+
+PROG=`basename $0`
+GROUPFILE="/archive/meta/groups"
+TAPEFILE="/archive/meta/tapes"
+export TAPE="/dev/nst0"
+
+function error_exit {
+    echo "$PROG failed: $1"
+    exit 64
+}
+
+#Tapes pools are identified by group leader
+POOL_ID=$1
+#Barcode which is on the back of the tape 
+TAPE_BARCODE=$2
+# Tape class
+TAPE_CLASS=$3
+# Tape number in the pool starting from 1
+TAPE_NUMBER=$4
+# if FORCE then write label to non empty tape 
+FORCE_WRITE=$5
+
+if [ $# -lt 4 ] ; then
+  error_exit "at least 4 arguments needed: POOL_ID TAPE_BARCODE TAPE_CLASS TAPE_NUMBER [FORCE] "  
+fi
+
+#Check if Pool ID is known in Groupfile
+grep "^$POOL_ID$"  $GROUPFILE> /dev/null
+if [ $? -eq 1 ] ; then
+    error_exit "pool name must be a group leader (check $GROUPFILE for valid names)"
+fi
+
+#Check if tape class is allowed
+cat << EOF | grep "^$TAPE_CLASS$" > /dev/null
+Primary
+GroupCopy
+TestTape
+EOF
+if [ $? -eq 1 ] ; then
+    error_exit "unknown tape class (Known: Primary/GroupCopy)"
+fi
+
+#Check if barcode is valid
+if [[ "$TAPE_BARCODE" != [0-9][0-9][0-9][0-9][0-9][0-9] ]] ; then 
+    error_exit "barcode is 6 numeric charaters"
+fi
+
+#Check if tape number is valid
+if [[ "$TAPE_NUMBER" != +([0-9]) ]] ; then 
+    error_exit "tape number not numeric"
+fi
+
+TAPE_STATUS=`mt status`
+
+
+# Check if there is a tape in the drive 
+if echo $TAPE_STATUS | grep "DR_OPEN" > /dev/null; then 
+    error_exit "no tape to label in reader"; 
+fi
+
+# Check if tape write protected
+if echo $TAPE_STATUS | grep "WR_PROT" > /dev/null; then 
+    error_exit "tape in reader has write protect tab switched on"; 
+fi
+
+# Check if tape is empty
+if [ "$FORCE_WRITE" != "FORCE" ] ; then 
+    if mt asf 1  2> /dev/null ; then 
+       error_exit "tape not empty use FORCE as last argument if you want to overwrite" 
+    fi 
+else
+    echo "Force labeling of non-empty tape "
+fi
+
+LABEL_DATE=`date +%d-%m-%Y`
+
+mt asf 0
+cat << EOF  > $TAPE
+{
+  "TapeBarcode"  : "$TAPE_BARCODE",
+  "LabelDate"    : "$LABEL_DATE",
+  "Organization" : "University of Amsterdam",
+  "Archive"      : "SILS RDM Tape Archive",
+  "PoolID"       : "$POOL_ID",
+  "TapeNumber"   : "$TAPE_NUMBER",
+  "TapeClass"    : "$TAPE_CLASS"
+}
+EOF
+
+echo "$TAPE_BARCODE	$LABEL_DATE	$POOL_ID	$TAPE_NUMBER	$TAPE_CLASS YES">> $TAPEFILE  
+
+exit
