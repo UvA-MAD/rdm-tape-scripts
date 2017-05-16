@@ -3,10 +3,10 @@
 Sils rdm scripts to archive and restore projects to tape 
 
 Basedirectory is /archive
+ * Stuff to be archived should be put in /archive/upload
+ * Archives are restored into /archive/restore
+ * Meta data is stored in /archive/meta
 
-Stuff to be archived should be put in /archive/upload
-Archives are restored into /archive/restore
-Meta data is stored in /archive/meta
 The following metadata is currently maintained: 
  * groups          : File with allowed pool names for tape labels (read by LabelTape)
  * archive_table   : Tabular file of archived projects. (written by ArchiveToTape, read by ListTape and RestoreFromTape)
@@ -23,6 +23,7 @@ The following metadata is currently maintained:
     * TAPE_CLASS   : Is it part of the primary archive or a copy for the group  (Primary/GroupCopy)
     * TAPE_NUMBER  : Tape number in the pool (Group) 
     * [FORCE]      : Use this parameter to force labeling a non-empty tape (overwriting all data on the tape) 
+
    example:  LabelTape Breit 000006 Primary 2 FORCE 
 
 2. ArchiveToTape:  Archive project
@@ -30,15 +31,18 @@ The following metadata is currently maintained:
    * TapeID            : Barcode of tape 
    * TapeLocationNumber: Location number on tape 
    * [FORCE]           : Archive even if there is data at that location  (overwriting all data ont the tape from the given location onward)
+ 
   example: ArchiveToTape 2015_Breit_Mother.spec.signature.eggs_Rauwerda_Breit 000002 1  
          
 3. RestoreFromTape: Restore project
     * TapeID            : Barcode of tape 
     * TapeLocationNumber: Location number on tape 
-      example: RestoreFromTape: 000002 1 
+
+   example: RestoreFromTape: 000002 1 
           
 4. ListTape: List information about tape(s)
     * [TapeID] : Barcode of tape
    Without arguments gives overview of tapes 
+ 
    example: ListTape 000002
     
