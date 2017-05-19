@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ##############################################################
 # name    : ListTape
 # author  : Wim de Leeuw
@@ -9,26 +8,26 @@
 ##############################################################
 
 PROG=`basename $0`
+CFG_FILE="/usr/local/lib/SilsRdmTape.cfg"
 
 function error_exit {
     echo "$PROG failed: $1"
     exit 64
 }
 
+if [ -r $CFG_FILE ] ; then
+  . $CFG_FILE
+else
+   error_exit "can not find find configuration file: $CFG_FILE"
+fi
+
 LOG_FILE="/archive/meta/archive_table"
 TAPE_FILE="/archive/meta/tapes"
 
-if [ ! -f $TAPE_FILE ] ; then
-   error_exit "could not locate file with tape information"
-fi
-
-if [ ! -f $LOG_FILE ] ; then
-   error_exit "could not locate file with archive information"
-fi
 
 if [ $# -lt 1 ] ; then
   echo "Overview of known tapes (barcode:label-date:group:number:class)"
-  cat $TAPE_FILE
+  echo 'SELECT * from Tape' | $SQL_QUERY
   echo "-----------------------------------"
   echo "Give barcode as parameter to get contents of specific tape"
   exit 0  
@@ -36,15 +35,17 @@ fi
 
 TAPE_BARCODE=$1
 echo TapeInfo: 
-grep "^$TAPE_BARCODE	" $TAPE_FILE 
+SQL_CMD='SELECT * from Tape where Barcode = "'$TAPE_BARCODE'"'
+echo "$SQL_CMD" | ${SQL_QUERY_HEADER}
 
 if [ ! "$?" -eq 0 ]  ; then 
     error_exit "$1 is unknown or unlabeled (tape_barcode must be 6 digits)."
 fi
 
 echo "-----------------------------------"
-echo "Data on tape (barcode:slot:name:UID:archive-date:md5sum)"
-grep "^$TAPE_BARCODE	" $LOG_FILE  
+echo "Data on tape (name:barcode:slot:UID:archive-date:md5sum)"
+SQL_CMD='SELECT * from Archive where Barcode = "'$TAPE_BARCODE'"'
+echo "$SQL_CMD" | ${SQL_QUERY_HEADER}
 
 if [ ! "$?" -eq 0 ]  ; then 
     error_exit "$1 empty tape."

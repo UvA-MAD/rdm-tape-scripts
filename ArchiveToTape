@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ##############################################################
 # name    : ArchiveToTape
 # author  : Wim de Leeuw
@@ -9,23 +8,28 @@
 ##############################################################
 
 PROG=`basename $0`
-ARCHIVE_NAME=$1
+CFG_FILE="/usr/local/lib/SilsRdmTape.cfg"
+
+INTERNAL_ID=$1
 TAPE_BARCODE=$2
 LOCATION=$3
-
-export TAPE="/dev/nst0"
-ARCH_DIR="/archive/upload"
-META_DIR="/archive/meta"
-LOG_FILE="${META_DIR}/archive_table"
-CONTENT_DIR="${META_DIR}/archive_content"
-
-TAR="/bin/tar"
-MT="/bin/mt"
+EXTERNAL_ID=$4
+FORCE=$5
 
 function error_exit {
     echo "$PROG failed: $1"
     exit 64
 }
+
+if [ -r $CFG_FILE ] ; then 
+  . $CFG_FILE
+else 
+   error_exit "can not find find configuration file: $CFG_FILE"
+fi
+
+
+CONTENT_DIR="${META_DIR}/archive_content"
+FORM_DIR="${META_DIR}/forms/processed"
 
 if [ ! -f ${MT} ] ; then
   error_exit "tape operation program $MT not found"  
@@ -35,20 +39,37 @@ if [ ! -d ${META_DIR} ] ; then
   error_exit "$META_DIR not found"  
 fi
 
-cd ${ARCH_DIR}
+cd ${UPLOAD_DIR}
 
-ARCHIVE_PATH="${ARCH_DIR}/${ARCHIVE_NAME}"
+ARCHIVE_PATH="${UPLOAD_DIR}/${INTERNAL_ID}"
 
-if [ $# -lt 3 ] ; then
-  error_exit "at least 3 arguments needed : Directory TapeID TapeLocationNumber"  
+if [ $# -lt 4 ] ; then
+  error_exit "at least 4 arguments needed : ArchiveID TapeBarcode TapeLocationNumber ExternalID [FORCE]"  
 fi
+
+APPLICATION_FORM=$FORM_DIR/${INTERNAL_ID}.pdf
+if [ ! -r $APPLICATION_FORM ] ; then 
+  error_exit "Processed application form ($APPLICATION_FORM) not found"
+fi 
 
 if [ ! -d "$ARCHIVE_PATH" ] ; then 
   error_exit "archive directory $ARCHIVE_PATH not found"
 fi 
 
-if [ ! -r "$ARCHIVE_PATH" ] ; then 
-  error_exit "archive directory $ARCHIVE_PATH not readable"
+if [ ! -w "$ARCHIVE_PATH" ] ; then 
+  error_exit "archive directory $ARCHIVE_PATH not writable, can not write metadata form"
+fi 
+
+
+#Check if barcode is valid
+if [[ "$TAPE_BARCODE" != [0-9][0-9][0-9][0-9][0-9][0-9] ]] ; then
+    error_exit "barcode has to be 6 digits"
+fi
+
+cp $APPLICATION_FORM $ARCHIVE_PATH
+
+if [ ! -f $ARCHIVE_PATH/${INTERNAL_ID}.pdf ] ; then 
+    error_exit "Failed to copy metadata form into archive"
 fi 
 
 TAPE_STATUS=`${MT} status`
@@ -63,6 +84,7 @@ if echo $TAPE_STATUS | grep "WR_PROT" > /dev/null; then
     error_exit "tape in reader has write protect tab switched on";
 fi
 
+
 ${MT} asf 0 
 ID_ON_TAPE=`cat $TAPE | jq -r ".TapeBarcode"`
 
@@ -75,7 +97,7 @@ if [ "$LOCATION" -lt 1 ] ; then
 fi 
 
 if  ${MT} asf $LOCATION  ; then 
-   if [ "$4" != "FORCE" ] ; then 
+   if [ "$FORCE" != "FORCE" ] ; then 
        if ${MT} asf $((LOCATION+1))  2> /dev/null ; then 
           error_exit "not last record" 
        fi 
@@ -89,13 +111,12 @@ fi
 
 MD5FILE=`mktemp /tmp/archMD5_XXXXXX`
 
-#$TAR -cf - $ARCHIVE_NAME | md5sum >  $MD5FILE
-find  $ARCHIVE_NAME  -type f -exec cat {} \; | md5sum > $MD5FILE
+find  $INTERNAL_ID  -type f -exec cat {} \; | md5sum > $MD5FILE
 
 # tar the archive to tape 
 
 ${MT} asf ${LOCATION}
-$TAR -cM ${ARCHIVE_NAME} 
+$TAR -cM ${INTERNAL_ID} 
 ${MT} asf ${LOCATION}
 
 # Check md5sum and fail if md5sum does not match which previously calculated value
@@ -109,10 +130,22 @@ fi
 MD5SUM=`awk '{print $1}' $MD5FILE`
 rm $MD5FILE
 
-ls -alR ${ARCHIVE_NAME} > ${CONTENT_DIR}/${ARCHIVE_NAME}.toc
+ls -alR ${INTERNAL_ID} > ${CONTENT_DIR}/${INTERNAL_ID}.toc
+SQL_CMD='INSERT INTO Archive VALUES ("'$INTERNAL_ID'","'$TAPE_BARCODE'",'$LOCATION',"'$EXTERNAL_ID'",CURDATE(),"'$MD5SUM'");'
+echo $SQL_CMD | ${SQL_QUERY}
 
-ARCHIVE_DATE=`date +%d-%m-%Y`
+if [ $? -ne 0 ] ; then 
+    error_exit "Project archived, database entry failed"
+fi
 
-echo "$TAPE_BARCODE	$LOCATION	$ARCHIVE_NAME	-	$ARCHIVE_DATE	$MD5SUM" >> $LOG_FILE
+
+exit 
+
+cp $APPLICATION_FORM /var/www/html/forms
+
+if [ $? -ne 0 ] ; then 
+    error_exit "Project archived, failed to copy application form"
+fi
+
 
 exit 

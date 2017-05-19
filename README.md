@@ -32,7 +32,7 @@ The following metadata is currently maintained:
    * TapeLocationNumber: Location number on tape 
    * [FORCE]           : Archive even if there is data at that location  (overwriting all data ont the tape from the given location onward)
  
-  example: ArchiveToTape 2015_Breit_Mother.spec.signature.eggs_Rauwerda_Breit 000002 1  
+   example: ArchiveToTape 2015_Breit_Mother.spec.signature.eggs_Rauwerda_Breit 000002 1  
          
 3. RestoreFromTape: Restore project
     * TapeID            : Barcode of tape 
