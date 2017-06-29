@@ -21,10 +21,6 @@ else
    error_exit "can not find find configuration file: $CFG_FILE"
 fi
 
-LOG_FILE="/archive/meta/archive_table"
-TAPE_FILE="/archive/meta/tapes"
-
-
 if [ $# -lt 1 ] ; then
   echo "Overview of known tapes (barcode:label-date:group:number:class)"
   echo 'SELECT * from Tape' | $SQL_QUERY

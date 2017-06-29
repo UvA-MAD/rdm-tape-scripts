@@ -1,0 +1,82 @@
+#!/bin/bash
+##############################################################
+# name    : ReceiveRequest
+# author  : Wim de Leeuw
+# date    : 28-06-2017
+# version : 0.1
+# descript: Script to process reception of archival request.
+# It is used after a request is recieved throug the web interface.
+# For now it needs a 
+# It does the following:
+#    1. Create directory to upload data to.
+#    2. Process request into Archive meta data pdf. 
+#    3. Sent email to requester that data can be uploaded to created directory.
+#    4. Update status of Request in database to "WaitData"
+##############################################################
+
+PROG=`basename $0`
+CFG_FILE="/usr/local/lib/SilsRdmTape.cfg"
+
+function error_exit {
+    echo "$PROG failed: $1"
+    exit 64
+}
+
+if [ $UID != "0" ] ; then 
+   error_exit "it must be run as root."
+fi 
+
+if [ -r $CFG_FILE ] ; then
+  . $CFG_FILE
+else
+   error_exit "can not find find configuration file: $CFG_FILE"
+fi
+
+#parameters
+REQUEST_ID=$1
+PROJECT_OWNER=$2
+PROJECT_OWNER_GROUP="$PROJECT_OWNER:Domain Users"
+
+
+QUERY="SELECT ArchiveID from Request WHERE ID='$REQUEST_ID'"
+PROJECT_ID=`echo $QUERY | $SQL_QUERY`
+
+if [ "$PROJECT_ID" == "" ] ; then
+  error_exit "Could not find RequestID : $REQUEST_ID"
+fi
+
+QUERY="SELECT Status from Request WHERE ID='$REQUEST_ID'"
+PROJECT_STATUS=`echo $QUERY | $SQL_QUERY`
+
+if [ "$PROJECT_STATUS" != "Pending" ] ; then 
+  error_exit "Project not in correct (Pending) status:  $PROJECT_STATUS"
+fi
+
+QUERY="SELECT Email from Request WHERE ID='$REQUEST_ID'"
+OWNER_EMAIL=`echo $QUERY | $SQL_QUERY`
+
+OWNER_NAME_GUESS=`echo $OWNER_EMAIL | sed 's/@.*//'`
+
+UPLOAD_DIR="/archive/upload/$PROJECT_ID"
+
+mkdir -p $UPLOAD_DIR
+chown "$PROJECT_OWNER_GROUP" $UPLOAD_DIR
+chmod go-rwx $UPLOAD_DIR
+
+FORM_DIR="${META_DIR}/forms/processed"
+APPLICATION_FORM=$FORM_DIR/${PROJECT_ID}.pdf
+
+if [ ! -f $APPLICATION_FORM ] ; then 
+   curl -s http://localhost/showform.php?id=$REQUEST_ID | /usr/local/bin/html2pdf -q - $APPLICATION_FORM
+fi
+
+{ echo -e "To: $OWNER_EMAIL" 
+  echo -e "Subject: SILS rdm request $PROJECT_ID: Ready for data" 
+  echo -e "bcc:rdm-archive.sils@uva.nl\nFrom:rdm-archive.sils@uva.nl"
+  echo -e "\nDear $OWNER_NAME_GUESS\n"
+  echo -e "Your archiving request with the ID $PROJECT_ID is now ready for data opload. An upload directory has been created for the data:\n" 
+  echo -e "sils-tape.science.uva.nl:/archive/upload/$PROJECT_ID\n"
+  echo -e "If the total amount of data is less than 500Gb please upload your project data to that directory.\nLet us know if all data is transferred, you have more than 500Gb of data or have any other question or problem.\n\nRegards\n\nSILS data steward"
+}  |  mailx -t
+QUERY="UPDATE Request SET Status='WaitData' WHERE ID='$REQUEST_ID'"
+echo $QUERY | $SQL_QUERY

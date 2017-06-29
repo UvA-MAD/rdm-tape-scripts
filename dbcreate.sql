@@ -6,10 +6,17 @@ GRANT ALL PRIVILEGES ON sils_rdm.* TO 'rdm_admin'@'localhost' WITH GRANT OPTION;
 CREATE USER 'rdm_reader'@'localhost' IDENTIFIED BY 'replacethisalso';
 GRANT SELECT ON rdm.* TO 'rdm_admin'@'localhost';
 
-CREATE TABLE `Groups` ( 
-      Name VARCHAR(20) NOT NULL PRIMARY KEY
+CREATE TABLE `Groups` (
+      Name VARCHAR(20) NOT NULL PRIMARY KEY,
+      Email VARCHAR(32) 
     );
-INSERT INTO `Groups` VALUES ('Group1'),('Group2'), ('Group3');
+INSERT INTO `Groups` VALUES ('Group1','contact@group1.org.com'),('group2','info@group2.com');
+
+CREATE TABLE `RequestStatus` ( 
+      Name VARCHAR(10) NOT NULL PRIMARY KEY
+    );
+INSERT INTO `RequestStatus` VALUES ('Denied'),('Pending'),('WaitData'),('Archived'),('Duplicated');
+
 
 CREATE TABLE Tape ( 
       `Barcode` CHARACTER(6) NOT NULL PRIMARY KEY, 
@@ -29,9 +36,34 @@ CREATE TABLE Archive (
       `ExternalID`   VARCHAR(128),
       `ArchiveDate`    DATE NOT NULL,
       `MD5sum`       VARCHAR(32),
+      `RequestID`    int,
+      PRIMARY KEY(Barcode,TapeLocation),
       FOREIGN KEY(`Barcode`) REFERENCES `Tape` (`Barcode`) ON UPDATE CASCADE ON DELETE RESTRICT,
-      PRIMARY KEY(Barcode,TapeLocation)
+      FOREIGN KEY(`RequestID`) REFERENCES `Request` (`ID`) ON UPDATE CASCADE ON DELETE RESTRICT
     );
       
+      
 
+
+CREATE TABLE Request (
+       `ID`              int NOT NULL AUTO_INCREMENT,
+       `Name`            VARCHAR(256),
+       `Email`           VARCHAR(256),
+       `Year`            INT,
+       `Group`           VARCHAR(20),
+       `ShortTitle`      VARCHAR(64),
+       `FirstAuthor`     VARCHAR(64),
+       `LastAuthor`      VARCHAR(64),
+       `Institutions`    VARCHAR(128),
+       `FundingAgencies` VARCHAR(128),
+       `Confidentiality` VARCHAR(128),
+       `Embargo`         VARCHAR(128),
+       `PreservationPeriod` VARCHAR(128),
+       `Remarks`         VARCHAR(8000),
+       `Status`          VARCHAR(10),
+       `CreationDate`    DATE,
+       PRIMARY KEY (ID),
+       FOREIGN KEY (`Group`) REFERENCES `Groups` (`Name`) ON UPDATE CASCADE ON DELETE RESTRICT ,
+       FOREIGN KEY (`Status`) REFERENCES `RequestStatus` (`Name`) ON UPDATE CASCADE ON DELETE RESTRICT 
+    );
 

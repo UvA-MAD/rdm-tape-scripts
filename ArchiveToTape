@@ -10,11 +10,12 @@
 PROG=`basename $0`
 CFG_FILE="/usr/local/lib/SilsRdmTape.cfg"
 
-INTERNAL_ID=$1
+REQUEST_ID=$1
 TAPE_BARCODE=$2
 LOCATION=$3
 EXTERNAL_ID=$4
 FORCE=$5
+
 
 function error_exit {
     echo "$PROG failed: $1"
@@ -31,6 +32,7 @@ fi
 CONTENT_DIR="${META_DIR}/archive_content"
 FORM_DIR="${META_DIR}/forms/processed"
 
+
 if [ ! -f ${MT} ] ; then
   error_exit "tape operation program $MT not found"  
 fi 
@@ -46,6 +48,27 @@ ARCHIVE_PATH="${UPLOAD_DIR}/${INTERNAL_ID}"
 if [ $# -lt 4 ] ; then
   error_exit "at least 4 arguments needed : ArchiveID TapeBarcode TapeLocationNumber ExternalID [FORCE]"  
 fi
+
+
+QUERY="SELECT ArchiveID from Request WHERE ID='$REQUEST_ID'"
+INTERNAL_ID=`echo $QUERY | $SQL_QUERY`
+
+
+if [ "$INTERNAL_ID" == "" ] ; then 
+  error_exit "Could not find RequestID : $REQUEST_ID"
+fi 
+
+Q1='SELECT `Group` FROM Request WHERE ID = "'$REQUEST_ID'"'
+REQUEST_GROUP=`echo $Q1 | $SQL_QUERY`
+
+
+Q2='SELECT `Group` FROM Tape WHERE Barcode = "'$TAPE_BARCODE'"'
+TAPE_GROUP=`echo $Q2 | $SQL_QUERY`
+
+
+if [ "$REQUEST_GROUP" != "$TAPE_GROUP" ]  ; then 
+  error_exit "Group of tape $TAPE_BARCODE ($TAPE_GROUP) not equal to requesting group $REQUEST_GROUP"
+fi 
 
 APPLICATION_FORM=$FORM_DIR/${INTERNAL_ID}.pdf
 if [ ! -r $APPLICATION_FORM ] ; then 
@@ -65,6 +88,8 @@ fi
 if [[ "$TAPE_BARCODE" != [0-9][0-9][0-9][0-9][0-9][0-9] ]] ; then
     error_exit "barcode has to be 6 digits"
 fi
+
+echo "Archiving $INTERNAL_ID"
 
 cp $APPLICATION_FORM $ARCHIVE_PATH
 
@@ -113,15 +138,19 @@ MD5FILE=`mktemp /tmp/archMD5_XXXXXX`
 
 find  $INTERNAL_ID  -type f -exec cat {} \; | md5sum > $MD5FILE
 
+#use compression
+
+${MT} compression 1
+
 # tar the archive to tape 
 
 ${MT} asf ${LOCATION}
-$TAR -cM ${INTERNAL_ID} 
+$TAR -c ${INTERNAL_ID} 
 ${MT} asf ${LOCATION}
 
 # Check md5sum and fail if md5sum does not match which previously calculated value
 
-tar -xO | md5sum  --quiet -c $MD5FILE 
+$TAR -xO | md5sum  --quiet -c $MD5FILE 
 if [ $? -eq 1 ] ; then 
     rm $MD5FILE
     error_exit "md5sum mismatch"
@@ -131,15 +160,12 @@ MD5SUM=`awk '{print $1}' $MD5FILE`
 rm $MD5FILE
 
 ls -alR ${INTERNAL_ID} > ${CONTENT_DIR}/${INTERNAL_ID}.toc
-SQL_CMD='INSERT INTO Archive VALUES ("'$INTERNAL_ID'","'$TAPE_BARCODE'",'$LOCATION',"'$EXTERNAL_ID'",CURDATE(),"'$MD5SUM'");'
+SQL_CMD='INSERT INTO Archive (Name,Barcode,TapeLocation,ExternalID,ArchiveDate,MD5sum,RequestID) VALUES ("'$INTERNAL_ID'","'$TAPE_BARCODE'",'$LOCATION',"'$EXTERNAL_ID'",CURDATE(),"'$MD5SUM'",'$REQUEST_ID');'
 echo $SQL_CMD | ${SQL_QUERY}
 
 if [ $? -ne 0 ] ; then 
     error_exit "Project archived, database entry failed"
 fi
-
-
-exit 
 
 cp $APPLICATION_FORM /var/www/html/forms
 
@@ -147,5 +173,4 @@ if [ $? -ne 0 ] ; then
     error_exit "Project archived, failed to copy application form"
 fi
 
-
-exit 
+echo "Done" 
