@@ -1,0 +1,115 @@
+body {
+     font-family: verdana,arial,sans-serif;
+     font-size: 14px;
+     background-color: #DDDDDD;
+     color: #000000;
+} 
+
+.container {
+    display: block;
+    max-width: 960px;
+    margin: 2em auto 2em;
+    padding: 2em;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+
+body.form {
+   font-family: arial,verdana,sans-serif;
+   font-size: 17px;
+   background-color: #FFFFFF;
+}
+
+.form input {
+   background-color: #AFFFAF;
+   padding-top: 4px;
+   padding-bottom: 4px;
+   border: none;
+}
+.form textarea {
+   background-color: #AFFFAF;
+   border: none
+}
+
+.value {
+   background-color: #AFFFAF;
+}
+
+.form select {
+   background-color: #AFFFAF;
+   border: none
+}
+
+h3 {
+    font-size: 16px;
+}
+
+.form h2,h3,h4 {
+    color: #2d74b5;
+    font-weight: normal;
+}
+
+.form h2 {
+   font-size: 18pt;
+   text-align: center;
+}
+
+.form h3 {
+   font-size: 18pt;
+}
+
+.form h4 {
+   padding: 0px;
+   margin: 0px;
+   font-size: 11pt;
+}
+
+.form td.label{
+  vertical-align: top;
+  width:  18em;
+  padding-bottom: 10px;
+}
+
+.form .haserror{
+   background-color: #FFAFAF;
+}
+
+h2 {
+   text-align: center;
+}
+
+a { color: #4040A0; }
+a:link { text-decoration: none; }
+a:visited { text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:active { text-decoration: underline; }
+
+table.gridtable {
+        font-size:11px;
+        color:#333333;
+        border-width: 1px;
+        border-color: #666666;
+        border-collapse: collapse;
+}
+table.gridtable th {
+        border-width: 1px;
+        padding: 8px;
+        border-style: solid;
+        border-color: #666666;
+        background-color: #dedede;
+}
+table.gridtable td {
+        border-width: 1px;
+        padding: 8px;
+        border-style: solid;
+        border-color: #666666;
+        background-color: #ffffff;
+}
+
+
+ul {
+   padding-left: 2em;
+}
+

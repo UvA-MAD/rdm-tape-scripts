@@ -32,6 +32,15 @@ else
    error_exit "can not find find configuration file: $CFG_FILE"
 fi
 
+if [ $# -lt 2 ] ; then
+  echo "Archives which might be received"
+  echo "RequestNumber  ArchiveID  Status"
+  echo "Select ID,ArchiveID,Status from Request where Status='Pending'" | $SQL_QUERY | sed 's/\t/  /g'
+  echo ""
+  error_exit "at least 2 arguments needed : RequestNumber UvAnetID of uploader"
+fi
+
+
 #parameters
 REQUEST_ID=$1
 PROJECT_OWNER=$2

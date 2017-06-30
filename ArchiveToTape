@@ -28,10 +28,12 @@ else
    error_exit "can not find find configuration file: $CFG_FILE"
 fi
 
-
 CONTENT_DIR="${META_DIR}/archive_content"
 FORM_DIR="${META_DIR}/forms/processed"
 
+if [ $UID != "0" ] ; then
+   error_exit "it must be run as root."
+fi
 
 if [ ! -f ${MT} ] ; then
   error_exit "tape operation program $MT not found"  
@@ -45,14 +47,15 @@ cd ${UPLOAD_DIR}
 
 
 if [ $# -lt 4 ] ; then
-  error_exit "at least 4 arguments needed : ArchiveID TapeBarcode TapeLocationNumber ExternalID [FORCE]"  
+  echo "Archives which might be archived"
+  echo "RequestNumber  ArchiveID  Status" 
+  echo "Select ID,ArchiveID,Status from Request where Status!='Duplicated' AND Status != 'Pending' " | $SQL_QUERY | sed 's/\t/  /g'
+  error_exit "at least 4 arguments needed : RequestNumber TapeBarcode TapeLocationNumber ExternalID [FORCE]"  
 fi
 
 
 QUERY="SELECT ArchiveID from Request WHERE ID='$REQUEST_NUMBER'"
 INTERNAL_ID=`echo $QUERY | $SQL_QUERY`
-
-
 
 if [ "$INTERNAL_ID" == "" ] ; then 
   error_exit "Could not find RequestID : $REQUEST_NUMBER"
