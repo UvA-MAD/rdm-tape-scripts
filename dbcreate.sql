@@ -34,8 +34,7 @@ CREATE TABLE Archive (
       `Barcode` CHARACTER(6) NOT NULL,
       `TapeLocation` INTEGER NOT NULL,
       `ExternalID`   VARCHAR(128),
-      `ArchiveDate`    DATE NOT NULL,
-      `MD5sum`       VARCHAR(32),
+      `ArchiveDate`  DATE NOT NULL,
       `RequestID`    int,
       PRIMARY KEY(Barcode,TapeLocation),
       FOREIGN KEY(`Barcode`) REFERENCES `Tape` (`Barcode`) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -62,6 +61,7 @@ CREATE TABLE Request (
        `Remarks`         VARCHAR(8000),
        `Status`          VARCHAR(10),
        `CreationDate`    DATE,
+       `MD5sum`          VARCHAR(32),
        PRIMARY KEY (ID),
        FOREIGN KEY (`Group`) REFERENCES `Groups` (`Name`) ON UPDATE CASCADE ON DELETE RESTRICT ,
        FOREIGN KEY (`Status`) REFERENCES `RequestStatus` (`Name`) ON UPDATE CASCADE ON DELETE RESTRICT 

@@ -30,12 +30,18 @@ LOCATION=$2
 
 SQL_CMD='SELECT Name from Archive where Barcode = "'$TAPE_BARCODE'" and TapeLocation = '$LOCATION
 ARCHIVE_NAME=`echo $SQL_CMD | ${SQL_QUERY}`
-SQL_CMD='SELECT MD5sum from Archive where Barcode = "'$TAPE_BARCODE'" and TapeLocation = '$LOCATION
-ARCHIVE_MD5=`echo $SQL_CMD | ${SQL_QUERY}`
 
 
 if [ "$ARCHIVE_NAME" == "" ] ; then 
-   error_exit "Unknown Archive."
+   if [ "$3" == "FORCE" ] ; then 
+      ARCHIVE_NAME="Unamed_restore_`date +%d-%m-%Y`"
+      ARCHIVE_MD5="Unknown (not in database)"
+   else
+      error_exit "This archive is not known in database. Use FORCE as third argument to restore Archive."
+   fi
+else
+   SQL_CMD='SELECT MD5sum from Request where ArchiveID = "'$ARCHIVE_NAME'"' 
+   ARCHIVE_MD5=`echo $SQL_CMD | ${SQL_QUERY}`
 fi
 
 echo "Restoring $ARCHIVE_NAME" 
@@ -72,8 +78,8 @@ fi
 
 $MT asf ${LOCATION}
 
-$TAR -xM 
-MD5CHECK=`find  $ARCHIVE_NAME  -type f -exec cat {} \; | md5sum | awk '{print $1}'`
+$TAR -x 
+MD5CHECK=`find $ARCHIVE_NAME  -type f -exec cat {} \; | md5sum | awk '{print $1}'`
 if [ "${MD5CHECK}" !=  "${ARCHIVE_MD5}" ] ; then 
     error_exit "md5sum does not match ${MD5CHECK} != ${ARCHIVE_MD5}"
 fi 

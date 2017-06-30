@@ -10,7 +10,7 @@
 PROG=`basename $0`
 CFG_FILE="/usr/local/lib/SilsRdmTape.cfg"
 
-REQUEST_ID=$1
+REQUEST_NUMBER=$1
 TAPE_BARCODE=$2
 LOCATION=$3
 EXTERNAL_ID=$4
@@ -50,15 +50,15 @@ if [ $# -lt 4 ] ; then
 fi
 
 
-QUERY="SELECT ArchiveID from Request WHERE ID='$REQUEST_ID'"
+QUERY="SELECT ArchiveID from Request WHERE ID='$REQUEST_NUMBER'"
 INTERNAL_ID=`echo $QUERY | $SQL_QUERY`
 
 
 if [ "$INTERNAL_ID" == "" ] ; then 
-  error_exit "Could not find RequestID : $REQUEST_ID"
+  error_exit "Could not find RequestID : $REQUEST_NUMBER"
 fi 
 
-Q1='SELECT `Group` FROM Request WHERE ID = "'$REQUEST_ID'"'
+Q1='SELECT `Group` FROM Request WHERE ID = "'$REQUEST_NUMBER'"'
 REQUEST_GROUP=`echo $Q1 | $SQL_QUERY`
 
 
@@ -133,10 +133,13 @@ else
    error_exit "requested tape location beyond current end"  
 fi
 
-
-MD5FILE=`mktemp /tmp/archMD5_XXXXXX`
-
-find  $INTERNAL_ID  -type f -exec cat {} \; | md5sum > $MD5FILE
+SQL_Q="Select MD5sum FROM Request WHERE ID =$REQUEST_NUMBER"
+MD5SUM=`echo $SQL_Q | $SQL_QUERY`
+if [ "$MD5SUM" == "NULL" -o "$MD5SUM" == "" ] ; then 
+   MD5SUM=`find  $INTERNAL_ID  -type f -exec cat {} \; | md5sum | awk  '{print $1}'`
+   SQL_Q='UPDATE Request SET MD5sum="'$MD5SUM'" where ID = "'$REQUEST_NUMBER'"'
+   echo $SQL_Q | $SQL_QUERY`
+fi 
 
 #use compression
 
@@ -146,21 +149,21 @@ ${MT} compression 1
 
 ${MT} asf ${LOCATION}
 $TAR -c ${INTERNAL_ID} 
-${MT} asf ${LOCATION}
 
+#####
 # Check md5sum and fail if md5sum does not match which previously calculated value
-
-$TAR -xO | md5sum  --quiet -c $MD5FILE 
-if [ $? -eq 1 ] ; then 
-    rm $MD5FILE
-    error_exit "md5sum mismatch"
-fi 
-
-MD5SUM=`awk '{print $1}' $MD5FILE`
-rm $MD5FILE
+# Does not work if archive contains hard links
+#####
+# ${MT} asf ${LOCATION}
+# MD5CHECK = `$TAR -xO | md5sum  | awk '{print $1}'` 
+# if [ "$MD5SUM" != "$MD5CHECK" ] ; then 
+#    error_exit "md5sum of the archive on disk and the one tape do not match"
+# fi 
+#####
 
 ls -alR ${INTERNAL_ID} > ${CONTENT_DIR}/${INTERNAL_ID}.toc
-SQL_CMD='INSERT INTO Archive (Name,Barcode,TapeLocation,ExternalID,ArchiveDate,MD5sum,RequestID) VALUES ("'$INTERNAL_ID'","'$TAPE_BARCODE'",'$LOCATION',"'$EXTERNAL_ID'",CURDATE(),"'$MD5SUM'",'$REQUEST_ID');'
+
+SQL_CMD='INSERT INTO Archive (Name,Barcode,TapeLocation,ExternalID,ArchiveDate,RequestID) VALUES ("'$INTERNAL_ID'","'$TAPE_BARCODE'",'$LOCATION',"'$EXTERNAL_ID'",CURDATE(),'$REQUEST_NUMBER');'
 echo $SQL_CMD | ${SQL_QUERY}
 
 if [ $? -ne 0 ] ; then 
