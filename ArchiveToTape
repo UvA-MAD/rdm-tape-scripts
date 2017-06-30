@@ -43,7 +43,6 @@ fi
 
 cd ${UPLOAD_DIR}
 
-ARCHIVE_PATH="${UPLOAD_DIR}/${INTERNAL_ID}"
 
 if [ $# -lt 4 ] ; then
   error_exit "at least 4 arguments needed : ArchiveID TapeBarcode TapeLocationNumber ExternalID [FORCE]"  
@@ -54,9 +53,11 @@ QUERY="SELECT ArchiveID from Request WHERE ID='$REQUEST_NUMBER'"
 INTERNAL_ID=`echo $QUERY | $SQL_QUERY`
 
 
+
 if [ "$INTERNAL_ID" == "" ] ; then 
   error_exit "Could not find RequestID : $REQUEST_NUMBER"
 fi 
+
 
 Q1='SELECT `Group` FROM Request WHERE ID = "'$REQUEST_NUMBER'"'
 REQUEST_GROUP=`echo $Q1 | $SQL_QUERY`
@@ -75,6 +76,7 @@ if [ ! -r $APPLICATION_FORM ] ; then
   error_exit "Processed application form ($APPLICATION_FORM) not found"
 fi 
 
+ARCHIVE_PATH="${UPLOAD_DIR}/${INTERNAL_ID}"
 if [ ! -d "$ARCHIVE_PATH" ] ; then 
   error_exit "archive directory $ARCHIVE_PATH not found"
 fi 
