@@ -16,7 +16,6 @@ LOCATION=$3
 EXTERNAL_ID=$4
 FORCE=$5
 
-
 function error_exit {
     echo "$PROG failed: $1"
     exit 64
@@ -49,7 +48,8 @@ cd ${UPLOAD_DIR}
 if [ $# -lt 4 ] ; then
   echo "Archives which might be archived"
   echo "RequestNumber  ArchiveID  Status" 
-  echo "Select ID,ArchiveID,Status from Request where Status!='Duplicated' AND Status != 'Pending' " | $SQL_QUERY | sed 's/\t/  /g'
+  echo "Select ID,ArchiveID,Status from Request where Status='WaitData' OR Status = 'Archived' " | $SQL_QUERY | sed 's/\t/  /g'
+  echo ""
   error_exit "at least 4 arguments needed : RequestNumber TapeBarcode TapeLocationNumber ExternalID [FORCE]"  
 fi
 
@@ -65,6 +65,10 @@ fi
 Q1='SELECT `Group` FROM Request WHERE ID = "'$REQUEST_NUMBER'"'
 REQUEST_GROUP=`echo $Q1 | $SQL_QUERY`
 
+#Check if barcode is valid
+if [[ "$TAPE_BARCODE" != [0-9][0-9][0-9][0-9][0-9][0-9] ]] ; then
+    error_exit "barcode has to be 6 digits"
+fi
 
 Q2='SELECT `Group` FROM Tape WHERE Barcode = "'$TAPE_BARCODE'"'
 TAPE_GROUP=`echo $Q2 | $SQL_QUERY`
@@ -73,6 +77,14 @@ TAPE_GROUP=`echo $Q2 | $SQL_QUERY`
 if [ "$REQUEST_GROUP" != "$TAPE_GROUP" ]  ; then 
   error_exit "Group of tape $TAPE_BARCODE ($TAPE_GROUP) not equal to requesting group $REQUEST_GROUP"
 fi 
+
+Q3='SELECT Status FROM Request WHERE ID = "'$REQUEST_NUMBER'"'
+REQUEST_STATUS=`echo $Q3 | $SQL_QUERY`
+
+if [ "$REQUEST_STATUS" == "Pending" -o "$REQUEST_STATUS" == "Denied" -o "$REQUEST_STATUS" == "" ]  ; then 
+   error_exit "Can not archive if Status is ($REQUEST_STATUS)"
+fi
+
 
 APPLICATION_FORM=$FORM_DIR/${INTERNAL_ID}.pdf
 if [ ! -r $APPLICATION_FORM ] ; then 
@@ -87,12 +99,6 @@ fi
 if [ ! -w "$ARCHIVE_PATH" ] ; then 
   error_exit "archive directory $ARCHIVE_PATH not writable, can not write metadata form"
 fi 
-
-
-#Check if barcode is valid
-if [[ "$TAPE_BARCODE" != [0-9][0-9][0-9][0-9][0-9][0-9] ]] ; then
-    error_exit "barcode has to be 6 digits"
-fi
 
 echo "Archiving $INTERNAL_ID"
 
@@ -114,6 +120,15 @@ if echo $TAPE_STATUS | grep "WR_PROT" > /dev/null; then
     error_exit "tape in reader has write protect tab switched on";
 fi
 
+
+SQL_Q="Select MD5sum FROM Request WHERE ID =$REQUEST_NUMBER"
+MD5SUM=`echo $SQL_Q | $SQL_QUERY`
+
+if [ "$MD5SUM" == "NULL" -o "$MD5SUM" == "" ] ; then 
+   MD5SUM=`find  $INTERNAL_ID  -type f -exec cat {} \; | md5sum | awk  '{print $1}'`
+   SQL_Q='UPDATE Request SET MD5sum="'$MD5SUM'" where ID = "'$REQUEST_NUMBER'"'
+   echo $SQL_Q | $SQL_QUERY
+fi 
 
 ${MT} asf 0 
 ID_ON_TAPE=`cat $TAPE | jq -r ".TapeBarcode"`
@@ -138,22 +153,17 @@ else
    error_exit "requested tape location beyond current end"  
 fi
 
-SQL_Q="Select MD5sum FROM Request WHERE ID =$REQUEST_NUMBER"
-MD5SUM=`echo $SQL_Q | $SQL_QUERY`
-if [ "$MD5SUM" == "NULL" -o "$MD5SUM" == "" ] ; then 
-   MD5SUM=`find  $INTERNAL_ID  -type f -exec cat {} \; | md5sum | awk  '{print $1}'`
-   SQL_Q='UPDATE Request SET MD5sum="'$MD5SUM'" where ID = "'$REQUEST_NUMBER'"'
-   echo $SQL_Q | $SQL_QUERY`
-fi 
 
 #use compression
-
 ${MT} compression 1
+${MT} asf ${LOCATION}
 
 # tar the archive to tape 
-
-${MT} asf ${LOCATION}
 $TAR -c ${INTERNAL_ID} 
+
+if [ $? -ne 0 ] ; then 
+    error_exit "tar to tape failed."
+fi
 
 #####
 # Check md5sum and fail if md5sum does not match which previously calculated value
@@ -175,10 +185,28 @@ if [ $? -ne 0 ] ; then
     error_exit "Project archived, database entry failed"
 fi
 
+NEW_STATUS=$REQUEST_STATUS
+
+if [ "$REQUEST_STATUS" == "WaitData" ] ; then 
+  NEW_STATUS="Archived"
+fi
+
+if [ "$REQUEST_STATUS" == "Archived" ] ; then 
+  NEW_STATUS="Duplicated"
+fi
+
+if [ "$NEW_STATUS" != "$REQUEST_STATUS" ] ; then 
+  SQL_CMD='UPDATE Request SET Status = "'$NEW_STATUS'" WHERE ID = '$REQUEST_NUMBER
+  echo $SQL_CMD | ${SQL_QUERY}
+fi 
+
+
+
+
 cp $APPLICATION_FORM /var/www/html/forms
 
 if [ $? -ne 0 ] ; then 
     error_exit "Project archived, failed to copy application form"
 fi
 
-echo "Done" 
+echo "Done archiving $INTERNAL_ID" 

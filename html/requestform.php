@@ -1,6 +1,6 @@
 <?php
-$con=mysqli_connect("localhost","sils_rdm_reader","Een__Beest","sils_rdm");
-if (mysqli_connect_errno()) { echo "Failed to connect to MySQL: " . mysqli_connect_error(); }
+include 'config.php';
+$con=connect_db();
 
 $clean_input=[];
 $input_err=[];

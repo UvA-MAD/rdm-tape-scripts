@@ -8,10 +8,8 @@
 <div class="container">
 <h2> projects currently in the Sils Research Data Archive</h2>
 <?php
-$con=mysqli_connect("localhost","sils_rdm_reader","Een__Beest","sils_rdm");
-if (mysqli_connect_errno()) {
-   echo "Failed to connect to MySQL: " . mysqli_connect_error();
-}
+include 'config.php'; 
+$con=connect_db();
 
 $result = mysqli_query($con,"select Name,Archive.Barcode,TapeLocation,ExternalID,ArchiveDate,`Group`,Tape.Class from Archive join Tape on Archive.Barcode = Tape.Barcode where Class='Primary' or Class='GroupCopy'");
 
