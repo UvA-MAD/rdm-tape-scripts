@@ -32,11 +32,22 @@ else
    error_exit "can not find find configuration file: $CFG_FILE"
 fi
 
+echo "select 1" | $SQL_QUERY > /dev/null
+
+if [ $? -ne 0 ] ; then
+  error_exit "Cannot connect to db."
+fi
+
 if [ $# -lt 2 ] ; then
-  echo "Archives which might be received"
-  echo "RequestNumber  ArchiveID  Status"
-  echo "Select ID,ArchiveID,Status from Request where Status='Pending'" | $SQL_QUERY | sed 's/\t/  /g'
-  echo ""
+  RCN=`echo "Select ID,ArchiveID,Status from Request where Status='Pending'" | $SQL_QUERY | sed 's/\t/  /g' | wc -l`
+  if [ $RCN -lt 1 ] ; then 
+     echo "No pending requests" 
+  else
+     echo "Archives which might be received"
+     echo "RequestNumber  ArchiveID  Status"
+     echo "Select ID,ArchiveID,Status from Request where Status='Pending'" | $SQL_QUERY | sed 's/\t/  /g'
+     echo ""
+  fi
   error_exit "at least 2 arguments needed : RequestNumber UvAnetID of uploader"
 fi
 

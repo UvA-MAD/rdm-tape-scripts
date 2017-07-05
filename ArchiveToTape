@@ -24,7 +24,7 @@ function error_exit {
 if [ -r $CFG_FILE ] ; then 
   . $CFG_FILE
 else 
-   error_exit "can not find find configuration file: $CFG_FILE"
+   error_exit "can not find or read configuration file: $CFG_FILE"
 fi
 
 CONTENT_DIR="${META_DIR}/archive_content"
@@ -33,6 +33,13 @@ FORM_DIR="${META_DIR}/forms/processed"
 if [ $UID != "0" ] ; then
    error_exit "it must be run as root."
 fi
+
+echo "select 1" | $SQL_QUERY > /dev/null
+
+if [ $? -ne 0 ] ; then
+  error_exit "Cannot connect to db." 
+fi
+
 
 if [ ! -f ${MT} ] ; then
   error_exit "tape operation program $MT not found"  
