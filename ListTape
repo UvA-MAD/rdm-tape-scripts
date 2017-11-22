@@ -15,6 +15,13 @@ function error_exit {
     exit 64
 }
 
+function tape_overview {
+    echo "Overview of known tapes (barcode:label-date:group:number:class:full)"
+    echo 'SELECT * from Tape' | $SQL_QUERY
+    echo "-----------------------------------"
+    echo "Give barcode as parameter to get contents of specific tape"
+} 
+
 if [ -r $CFG_FILE ] ; then
   . $CFG_FILE
 else
@@ -22,15 +29,23 @@ else
 fi
 
 if [ $# -lt 1 ] ; then
-  echo "Overview of known tapes (barcode:label-date:group:number:class)"
-  echo 'SELECT * from Tape' | $SQL_QUERY
-  echo "-----------------------------------"
-  echo "Give barcode as parameter to get contents of specific tape"
-  exit 0  
+  TAPE_STATUS=`$MT status`
+  if echo $TAPE_STATUS | grep "DR_OPEN" > /dev/null; then
+    tape_overview
+    error_exit "no tape in reader";
+  fi
+  $MT asf 0
+  TAPE_BARCODE=`cat $TAPE 2> /dev/null | jq -r ".TapeBarcode"`
+  if [ "$TAPE_BARCODE" == "" ]  ; then
+    tape_overview
+    error_exit "tape in reader has no label";
+  fi 
+  echo "Information on tape $TAPE_BARCODE (now in reader):" 
+else 
+  TAPE_BARCODE=$1
+  echo "Information on tape $TAPE_BARCODE:"
 fi
 
-TAPE_BARCODE=$1
-echo TapeInfo: 
 SQL_CMD='SELECT * from Tape where Barcode = "'$TAPE_BARCODE'"'
 echo "$SQL_CMD" | ${SQL_QUERY_HEADER}
 
@@ -39,7 +54,7 @@ if [ ! "$?" -eq 0 ]  ; then
 fi
 
 echo "-----------------------------------"
-echo "Data on tape (name:barcode:slot:UID:archive-date:md5sum)"
+echo "Data on tape"
 SQL_CMD='SELECT * from Archive where Barcode = "'$TAPE_BARCODE'"'
 echo "$SQL_CMD" | ${SQL_QUERY_HEADER}
 

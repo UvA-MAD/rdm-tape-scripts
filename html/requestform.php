@@ -81,7 +81,7 @@ if (!empty($_POST))
                $input_submit =0;
         } 
         echo "<p>Submission received.  </p>\n";
-        echo "<p>A confirmation email is underway.  </p>\n";
+        echo "<p>A confirmation email is on the way.  </p>\n";
     } 
 }
 
@@ -137,7 +137,7 @@ function form_table_input($label,$parameter,$default,$size,$ml) {
 <!DOCTYPE html>
 <html>
 <head>
-   <title>SILS RD Archival request form</title>
+   <title>SILS Research Data Archive: request form</title>
    <link rel="stylesheet" href="http://sils-tape.science.uva.nl/mainstyle.css" type="text/css">
 </head>
 <body class="form"> 

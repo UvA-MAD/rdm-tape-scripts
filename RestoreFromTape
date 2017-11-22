@@ -21,15 +21,23 @@ else
    error_exit "can not find find configuration file: $CFG_FILE"
 fi
 
-if [ $# -lt 2 ] ; then
-  error_exit "at least 2 arguments needed : Barcode TapeLocationNumber"  
+if [ $# -lt 1 ] ; then
+  error_exit "Arguments needed : ArchiveName or Barcode and TapeLocationNumber"  
 fi
 
-TAPE_BARCODE=$1
-LOCATION=$2
-
-SQL_CMD='SELECT Name from Archive where Barcode = "'$TAPE_BARCODE'" and TapeLocation = '$LOCATION
-ARCHIVE_NAME=`echo $SQL_CMD | ${SQL_QUERY}`
+if [ $# -lt 2 ] ; then
+  ARCHIVE_NAME=$1
+  SQL_CMD='SELECT Barcode from Archive where Name = "'$ARCHIVE_NAME'" '
+  TAPE_BARCODE=(`echo $SQL_CMD | ${SQL_QUERY}`)
+  if [ "${TAPE_BARCODE[0]}" == "" ] ; then 
+      error_exit "An archive named $ARCHIVE_NAME is not known in database."
+  fi 
+else 
+  TAPE_BARCODE=$1
+  LOCATION=$2
+  SQL_CMD='SELECT Name from Archive where Barcode = "'$TAPE_BARCODE'" and TapeLocation = '$LOCATION
+  ARCHIVE_NAME=`echo $SQL_CMD | ${SQL_QUERY}`
+fi 
 
 
 if [ "$ARCHIVE_NAME" == "" ] ; then 
@@ -63,9 +71,22 @@ $MT asf 0
 
 ID_ON_TAPE=`cat $TAPE 2> /dev/null | jq -r ".TapeBarcode"` 
 
-if [ "$ID_ON_TAPE" != "$TAPE_BARCODE" ] ; then 
-   error_exit "tape has wrong barcode or is unlabeled"
-fi 
+TAPE_IN_READER=UNKNOWN
+for tb in "${TAPE_BARCODE[@]}"
+do
+   if [ "$tb" == "$ID_ON_TAPE" ] ; then 
+     TAPE_IN_READER=TRUE
+   fi 
+done
+
+if [ "$TAPE_IN_READER" != "TRUE" ] ;  then
+    error_exit "Tape not in reader. Archive $ARCHIVE_NAME is on tape(s): ${TAPE_BARCODE[*]}";
+fi
+
+if [ "$LOCATION" == "" ] ; then 
+  SQL_CMD='SELECT TapeLocation from Archive where Name = "'$ARCHIVE_NAME'" and Barcode = "'$ID_ON_TAPE'"'
+  LOCATION=`echo $SQL_CMD | ${SQL_QUERY}`
+fi
 
 if [ "$LOCATION" -lt 1 ] ; then 
    error_exit "invalid tape location : $LOCATION"
@@ -79,9 +100,13 @@ fi
 $MT asf ${LOCATION}
 
 $TAR -x 
+if [ $? -ne 0 ] ; then
+    error_exit "tar from tape failed."
+fi
+
 MD5CHECK=`find $ARCHIVE_NAME  -type f -exec cat {} \; | md5sum | awk '{print $1}'`
 if [ "${MD5CHECK}" !=  "${ARCHIVE_MD5}" ] ; then 
-    error_exit "md5sum does not match ${MD5CHECK} != ${ARCHIVE_MD5}"
+    error_exit "md5sum does not match value calculated before archiving ${MD5CHECK} != ${ARCHIVE_MD5}"
 fi 
 
 echo "$ARCHIVE_NAME sucessfully restored"

@@ -99,6 +99,6 @@ cat << EOF  > $TAPE
 }
 EOF
 
-echo 'INSERT INTO Tape VALUES ("'$TAPE_BARCODE'",CURDate(),"'$POOL_ID'",'$TAPE_NUMBER',"'$TAPE_CLASS'",TRUE);'  | ${SQL_QUERY}
+echo 'INSERT INTO Tape VALUES ("'$TAPE_BARCODE'",CURDate(),"'$POOL_ID'",'$TAPE_NUMBER',"'$TAPE_CLASS'",TRUE,TRUE);'  | ${SQL_QUERY}
 
 exit

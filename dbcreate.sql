@@ -8,7 +8,9 @@ GRANT SELECT ON rdm.* TO 'rdm_admin'@'localhost';
 
 CREATE TABLE `Groups` (
       Name VARCHAR(20) NOT NULL PRIMARY KEY,
-      Email VARCHAR(32) 
+      Email VARCHAR(32),
+      ContactPerson VARCHAR(32),
+      ContactPersonEmail VARCHAR(32) 
     );
 INSERT INTO `Groups` VALUES ('Group1','contact@group1.org.com'),('group2','info@group2.com');
 
@@ -25,6 +27,7 @@ CREATE TABLE Tape (
       `Number` integer, 
       `Class` VARCHAR(20), 
       `TapeIsLabeled` BOOLEAN,
+      `IsFull` BOOLEAN,
       FOREIGN KEY (`Group`) REFERENCES `Groups` (`Name`) ON UPDATE CASCADE ON DELETE RESTRICT
     );
 

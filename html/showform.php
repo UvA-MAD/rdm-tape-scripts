@@ -21,7 +21,7 @@ function form_table_line($label,$value) {
 <!DOCTYPE html>
 <html>
 <head>
-   <title>SILS RD Archival form</title>
+   <title>SILS Research Data Archive: archive form</title>
    <link rel="stylesheet" href="http://sils-tape.science.uva.nl/mainstyle.css" type="text/css">
 </head>
 <body class="form"> 

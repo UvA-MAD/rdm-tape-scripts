@@ -92,6 +92,12 @@ if [ "$REQUEST_STATUS" == "Pending" -o "$REQUEST_STATUS" == "Denied" -o "$REQUES
    error_exit "Can not archive if Status is ($REQUEST_STATUS)"
 fi
 
+Q4='SELECT Name FROM Archive WHERE Barcode = "'$TAPE_BARCODE'" and Name = "'$INTERNAL_ID'"'
+STORED_ARCHIVE=`echo $Q4 | $SQL_QUERY`
+
+if [ "$STORED_ARCHIVE" == "$INTERNAL_ID" -a "$FORCE" != "FORCE" ] ; then
+  error_exit "Archive already stored on tape $TAPE_BARCODE"
+fi
 
 APPLICATION_FORM=$FORM_DIR/${INTERNAL_ID}.pdf
 if [ ! -r $APPLICATION_FORM ] ; then 
@@ -206,8 +212,6 @@ if [ "$NEW_STATUS" != "$REQUEST_STATUS" ] ; then
   SQL_CMD='UPDATE Request SET Status = "'$NEW_STATUS'" WHERE ID = '$REQUEST_NUMBER
   echo $SQL_CMD | ${SQL_QUERY}
 fi 
-
-
 
 
 cp $APPLICATION_FORM /var/www/html/forms
