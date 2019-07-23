@@ -1,4 +1,10 @@
 <?php
+
+# Show and process the request form. 
+# SELinux might prevent the server from sending email 
+# to enable use the following command 
+# [sudo] setsebool -P httpd_can_sendmail=1
+
 include 'config.php';
 $con=connect_db();
 
