@@ -138,7 +138,7 @@ function form_table_input($label,$parameter,$default,$size,$ml) {
 <html>
 <head>
    <title>SILS Research Data Archive: request form</title>
-   <link rel="stylesheet" href="http://sils-tape.science.uva.nl/mainstyle.css" type="text/css">
+   <link rel="stylesheet" href="mainstyle.css" type="text/css">
 </head>
 <body class="form"> 
 <?php show_err(); 
@@ -154,7 +154,7 @@ function form_table_input($label,$parameter,$default,$size,$ml) {
       form_table_input("Contact (e-mail):","Email","",50,60).
       "<tr><td colspan =2><h3>Information for archive name:</h3></td></tr>\n".
       "<tr><td colspan =2><h4>Archive name will have the form: year_group_short.title_first.author_last.author</h4></td></tr>\n".
-      form_table_input("Year:","Year","2017",4,4). 
+      form_table_input("Year:","Year","2020",4,4). 
       "<tr><td class='label'>Group:</td>\n".  
       "<td><select name='Group'>\n";
       if (array_key_exists("Group",$_POST)) { $s= $_POST["Group"];} else { $s= "UNKNOWN"; } 
@@ -178,7 +178,7 @@ function form_table_input($label,$parameter,$default,$size,$ml) {
         form_table_input("Confidentiality:","Confidentiality","open",10,16). 
         form_table_input("Embargo:","Embargo","no",10,16). 
         form_table_input("Preservation period:","PreservationPeriod","10 years",10,16).
-        "<tr><td class='label'>Remarks:</td> <td><textarea rows='20' cols='70'name='Remarks'>".
+        "<tr><td class='label'>Remarks:</td> <td><textarea rows='20' cols='70' name='Remarks'>".
         keep_posted("Remarks","").
         "</textarea></td></tr>\n".
         "<tr><td></td><td><button name='Submit' value='request'>submit</button></td><tr>\n".

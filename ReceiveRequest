@@ -94,9 +94,10 @@ fi
   echo -e "Subject: SILS rdm request $PROJECT_ID: Ready for data" 
   echo -e "bcc:rdm-archive.sils@uva.nl\nFrom:rdm-archive.sils@uva.nl"
   echo -e "\nDear $OWNER_NAME_GUESS\n"
-  echo -e "Your archiving request with the ID $PROJECT_ID is now ready for data opload. An upload directory has been created for the data:\n" 
-  echo -e "sils-tape.science.uva.nl:/archive/upload/$PROJECT_ID\n"
-  echo -e "If the total amount of data is less than 500Gb please upload your project data to that directory.\nLet us know if all data is transferred, you have more than 500Gb of data or have any other question or problem.\n\nRegards\n\nSILS data steward"
+  echo -e "Your archiving request with the ID $PROJECT_ID is now ready for data upload. An upload directory has been created for the data:\n" 
+  echo -e "${PROJECT_OWNER}@sils-tape.science.uva.nl:/archive/upload/$PROJECT_ID\n"
+  echo -e "We assumed ${PROJECT_OWNER} will be uploading the data. If not let us know."  
+  echo -e "If the total amount of data is less than 500Gb please upload your project data to that directory.\nLet us know if all data is transferred, you have more than 500Gb of data or have any other question or problem.\n\nRegards\n\nSILS tape manager"
 }  |  mailx -t
 QUERY="UPDATE Request SET Status='WaitData' WHERE ID='$REQUEST_ID'"
 echo $QUERY | $SQL_QUERY

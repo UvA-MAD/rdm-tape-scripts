@@ -82,6 +82,7 @@ if [ "$FORCE_WRITE" != "FORCE" ] ; then
     fi 
 else
     echo "Force labeling of non-empty tape "
+    echo 'DELETE FROM Tape WHERE Barcode="'$TAPE_BARCODE'";'  | ${SQL_QUERY}
 fi
 
 LABEL_DATE=`date +%d-%m-%Y`
@@ -98,6 +99,7 @@ cat << EOF  > $TAPE
   "TapeClass"    : "$TAPE_CLASS"
 }
 EOF
+
 
 echo 'INSERT INTO Tape VALUES ("'$TAPE_BARCODE'",CURDate(),"'$POOL_ID'",'$TAPE_NUMBER',"'$TAPE_CLASS'",TRUE,TRUE);'  | ${SQL_QUERY}
 
