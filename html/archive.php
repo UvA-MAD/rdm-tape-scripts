@@ -70,11 +70,12 @@ while($row = $result->fetch_array()) {
        echo "<option value='$self?selGroup=$row[0]'>$row[0]</option> ";
     }
 } 
-echo "</select><br/>";
+echo "</select>
+<br/>";
 
 
 $pg=1;
-$rpp=20;
+$rpp=25;
 
 if (array_key_exists('page',$_GET)) { 
     $pg = 1*($_GET['page']);

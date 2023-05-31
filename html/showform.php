@@ -4,6 +4,9 @@ $con=connect_db();
 
 $id = $_GET['id'];
 
+$id =strval(intval($id));
+
+
 $query="SELECT `Name`,`Email`,`Year`,`Group`,`ShortTitle`,`FirstAuthor`,".
        "`LastAuthor`,`Institutions`,`FundingAgencies`,`Confidentiality`,".
        "`Embargo`,`PreservationPeriod`,`Remarks`,`Status`,`CreationDate`,`ArchiveID`".
@@ -22,7 +25,7 @@ function form_table_line($label,$value) {
 <html>
 <head>
    <title>SILS Research Data Archive: archive form</title>
-   <link rel="stylesheet" href="http://sils-tape.science.uva.nl/mainstyle.css" type="text/css">
+   <link rel="stylesheet" href="mainstyle.css" type="text/css">
 </head>
 <body class="form"> 
 <?php

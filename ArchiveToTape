@@ -147,7 +147,7 @@ ${MT} asf 0
 ID_ON_TAPE=`cat $TAPE | jq -r ".TapeBarcode"`
 
 if [ "$ID_ON_TAPE" != "$TAPE_BARCODE" ] ; then 
-   error_exit "tape barcode mismatch tape has no or non matching label"
+   error_exit "tape barcode mismatch. Tape has no label or barcode in label does not match barcode in request"
 fi 
 
 if [ "$LOCATION" -lt 1 ] ; then 

@@ -1,10 +1,4 @@
 <?php
-
-# Show and process the request form. 
-# SELinux might prevent the server from sending email 
-# to enable use the following command 
-# [sudo] setsebool -P httpd_can_sendmail=1
-
 include 'config.php';
 $con=connect_db();
 
@@ -87,7 +81,7 @@ if (!empty($_POST))
                $input_submit =0;
         } 
         echo "<p>Submission received.  </p>\n";
-        echo "<p>A confirmation email is on the way.  </p>\n";
+        echo "<p> You will be contacted soon to transfer the data. </p>\n";
     } 
 }
 
